@@ -4,8 +4,8 @@
 #include <curl/curl.h>
 #include <string.h>
 #include <stdlib.h>
-
-#define BUFFER_SIZE 2048
+#include <errno.h>
+#include <time.h>
 
 struct string_write_result {
     char *data;
@@ -68,9 +68,26 @@ static void count_recurrences(const char *word) {
     }
 }
 
-static void print_recurrences(void) {
+static void fprintf_recurrences(FILE *out, const char *str) {
     for (int i = 0; i < w.num_words; i++) {
-        printf("Word '%s' appears %d times.\n", w.words[i].word, w.words[i].ntimes);
+        fprintf(out, str, w.words[i].word, w.words[i].ntimes);
+    }
+}
+
+static void csv_store_recurrences(void) {
+    char buff[30];
+    
+    time_t now = time(NULL);
+    strftime (buff, 100, "%Y-%m-%d %H:%M:%S\t", localtime(&now));
+    strcat(buff, "%s\t%d\n");
+    
+    FILE *f = fopen("libero.csv", "a");
+    if (f) {
+        fprintf_recurrences(f, buff);
+        fprintf(f, "\n");
+        fclose(f);
+    } else {
+        fprintf(stderr, "%s\n", strerror(errno));
     }
 }
 
@@ -97,7 +114,8 @@ int main(int argc, char *argv[]) {
             count_recurrences(argv[i]);
         }
         
-        print_recurrences();
+        fprintf_recurrences(stdout, "Word '%s' appears %d times.\n");
+        csv_store_recurrences();
         free_recurrences();
         free(string.data);
     }
